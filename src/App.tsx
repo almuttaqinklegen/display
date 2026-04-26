@@ -405,6 +405,54 @@ function extractManualSaldoAwal(content: string): number | null {
   return null;
 }
 
+function parseLaporanSummaryFromHorizontalCsv(content: string): LaporanSummary | null {
+  const rows = toHeaderRows(content);
+  if (!rows.length) return null;
+
+  const latest = rows[rows.length - 1];
+
+  const saldoAwal = parseRupiah(getByAliases(latest, ["TOTAL SALDO AWAL", "SALDO AWAL"]));
+  const infakHarian = parseRupiah(getByAliases(latest, ["INFAQ HARIAN", "INFAK HARIAN"]));
+  const infakJumat = parseRupiah(getByAliases(latest, ["INFAQ JUM'AT", "INFAQ JUMAT", "INFAK JUMAT"]));
+  const kasMasukKonsumsi = parseRupiah(getByAliases(latest, ["KAS MASUK KONSUMSI"]));
+
+  const kasUtama = parseRupiah(getByAliases(latest, ["KAS UTAMA", "KAS KELUAR UTAMA"]));
+  const kasKeluarKonsumsi = parseRupiah(getByAliases(latest, ["KAS KELUAR KONSUMSI", "KAS KONSUMSI"]));
+  const kasKegiatanTpa = parseRupiah(getByAliases(latest, ["KAS KEGIATAN TPA", "KAS KELUAR KEGIATAN TPA"]));
+  const kasKebersihan = parseRupiah(getByAliases(latest, ["KAS KEBERSIHAN", "KAS KELUAR KEBERSIHAN"]));
+  const kasAkomodasiUstadz = parseRupiah(
+    getByAliases(latest, ["KAS AKOMODASI USTADZ", "KAS AKOMODASI USTAZ"])
+  );
+  const kasKhatibJumat = parseRupiah(
+    getByAliases(latest, ["KAS KHATIB JUM'AT", "KAS KHATIB JUMAT", "KAS KHOTIB JUM'AT", "KAS KHOTIB JUMAT"])
+  );
+
+  const totalKasMasukRaw = parseRupiah(getByAliases(latest, ["TOTAL KAS MASUK"]));
+  const totalKasKeluarRaw = parseRupiah(getByAliases(latest, ["TOTAL KAS KELUAR"]));
+  const totalSaldoRaw = parseRupiah(getByAliases(latest, ["TOTAL SALDO AKHIR", "TOTAL SALDO", "SALDO AKHIR"]));
+
+  const totalKasMasuk = totalKasMasukRaw || (infakHarian + infakJumat + kasMasukKonsumsi);
+  const totalKasKeluar =
+    totalKasKeluarRaw ||
+    (kasUtama + kasKeluarKonsumsi + kasKegiatanTpa + kasKebersihan + kasAkomodasiUstadz + kasKhatibJumat);
+
+  return {
+    saldoAwal: saldoAwal || SALDO_AWAL_DEFAULT,
+    totalKasMasuk,
+    totalKasKeluar,
+    rincianMasuk: { infakHarian, infakJumat, kasMasukKonsumsi },
+    rincianKeluar: {
+      kasUtama,
+      kasKeluarKonsumsi,
+      kasKegiatanTpa,
+      kasKebersihan,
+      kasAkomodasiUstadz,
+      kasKhatibJumat,
+    },
+    totalSaldo: totalSaldoRaw || ((saldoAwal || SALDO_AWAL_DEFAULT) + totalKasMasuk - totalKasKeluar),
+  };
+}
+
 function latestAmountByKasName(items: ReportTxn[], aliases: string[]): number {
   const targetNames = aliases.map((alias) => normalizeKasName(alias));
   for (let index = items.length - 1; index >= 0; index -= 1) {
@@ -1159,34 +1207,21 @@ export default function App() {
           perincianResponse.text(),
         ]);
 
-        if (!mounted) {
-          return;
-        }
+      if (!mounted) return;
 
-        const laporanTransactions = parseReportTransactions(laporanCsv);
-        const saldoAwalManual = extractManualSaldoAwal(laporanCsv);
-        setLaporanSummary((prev) => {
-          const previewSummary = buildLaporanSummary(laporanTransactions, prev.totalSaldo || SALDO_AWAL_DEFAULT);
-          const summarySignature = JSON.stringify({
-            totalKasMasuk: previewSummary.totalKasMasuk,
-            totalKasKeluar: previewSummary.totalKasKeluar,
-            rincianMasuk: previewSummary.rincianMasuk,
-            rincianKeluar: previewSummary.rincianKeluar,
-          });
+const parsedHorizontal = parseLaporanSummaryFromHorizontalCsv(laporanCsv);
 
-          if (saldoAwalManual !== null) {
-            lastFinanceSignatureRef.current = summarySignature;
-            return buildLaporanSummary(laporanTransactions, saldoAwalManual);
-          }
+if (parsedHorizontal) {
+  setLaporanSummary(parsedHorizontal);
+} else {
+  const laporanTransactions = parseReportTransactions(laporanCsv);
+  const saldoAwalManual = extractManualSaldoAwal(laporanCsv);
+  setLaporanSummary(
+    buildLaporanSummary(laporanTransactions, saldoAwalManual ?? SALDO_AWAL_DEFAULT),
+  );
+}
 
-          if (lastFinanceSignatureRef.current === summarySignature) {
-            return prev;
-          }
-
-          lastFinanceSignatureRef.current = summarySignature;
-          return buildLaporanSummary(laporanTransactions, prev.totalSaldo || SALDO_AWAL_DEFAULT);
-        });
-        setPerincianItems(parseReportTransactions(perincianCsv));
+setPerincianItems(parseReportTransactions(perincianCsv));
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
