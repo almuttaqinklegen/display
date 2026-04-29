@@ -1873,7 +1873,7 @@ setPerincianItems(parseReportTransactions(perincianCsv));
             </div>
           ) : silentMode && !videoPlaying ? (
             <div className="flex h-full flex-col items-center justify-center px-8">
-              <div className="mb-6 text-center text-5xl font-black tracking-wide text-[#00ff88]">WAKTU TENANG</div>
+              <div className="mb-6 text-center text-5xl font-black tracking-wide text-[#00ff88]">WAKTU SHOLAT</div>
               <div className="mb-10 text-[8rem] leading-none font-black">{format(now, "HH:mm:ss")}</div>
               <div className="mb-6 grid w-full grid-cols-5 gap-4">
                 {prayers.list.map((prayer) => (
@@ -2067,11 +2067,11 @@ setPerincianItems(parseReportTransactions(perincianCsv));
                           </div>
 
                           <div className="rounded-xl bg-white p-6 text-black">
-                            <div className="text-[3.8rem] font-black text-[#39e600]">TOTAL KAS MASUK : RP {laporanSummary.totalKasMasuk.toLocaleString("id-ID")}</div>
+                            <div className="text-[3.8rem] font-black text-[#15803d]">TOTAL KAS MASUK : RP {laporanSummary.totalKasMasuk.toLocaleString("id-ID")}</div>
                             <div className="mt-3 font-black">
-                              {renderAmountLine("KAS MASUK INFAQ HARIAN", laporanSummary.rincianMasuk.infakHarian, "text-[#39e600]", unifiedFinanceAgendaTextClass, true)}
-                              {renderAmountLine("KAS MASUK INFAQ JUM'AT", laporanSummary.rincianMasuk.infakJumat, "text-[#39e600]", unifiedFinanceAgendaTextClass, true)}
-                              {renderAmountLine("KAS MASUK KONSUMSI", laporanSummary.rincianMasuk.kasMasukKonsumsi, "text-[#39e600]", unifiedFinanceAgendaTextClass, true)}
+                              {renderAmountLine("KAS MASUK INFAQ HARIAN", laporanSummary.rincianMasuk.infakHarian, "text-[#15803d]", unifiedFinanceAgendaTextClass, true)}
+                              {renderAmountLine("KAS MASUK INFAQ JUM'AT", laporanSummary.rincianMasuk.infakJumat, "text-[#15803d]", unifiedFinanceAgendaTextClass, true)}
+                              {renderAmountLine("KAS MASUK KONSUMSI", laporanSummary.rincianMasuk.kasMasukKonsumsi, "text-[#15803d]", unifiedFinanceAgendaTextClass, true)}
                             </div>
                           </div>
 
