@@ -6,6 +6,14 @@ const PENGASIH_COORDINATES = new Coordinates(-7.8353719, 110.1600898);
 function getPengasihPrayerTimes(now: Date) {
   const params = CalculationMethod.Singapore();
   params.madhab = Madhab.Shafi;
+
+  // Offset lokal agar tidak terlalu maju 2 menit
+  params.adjustments.fajr = 2;
+  params.adjustments.dhuhr = 2;
+  params.adjustments.asr = 2;
+  params.adjustments.maghrib = 2;
+  params.adjustments.isha = 2;
+
   return new PrayerTimes(PENGASIH_COORDINATES, now, params);
 }
 
