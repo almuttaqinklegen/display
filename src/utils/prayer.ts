@@ -1,7 +1,7 @@
 import { CalculationMethod, Coordinates, Madhab, PrayerTimes } from "adhan";
 
 // Pinpoint tuned for Klegen RT 15/RW 08, Sendangsari, Pengasih, Kulon Progo.
-const PENGASIH_COORDINATES = new Coordinates(-7.8589, 110.1308);
+const PENGASIH_COORDINATES = new Coordinates(-7.8427, 110.1583);
 
 function getPengasihPrayerTimes(now: Date) {
   const params = CalculationMethod.Singapore();
