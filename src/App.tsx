@@ -1532,10 +1532,11 @@ useEffect(() => {
     }
   };
 
+
+        void loadFinanceSlides();
+const interval = window.setInterval(() => {
   void loadFinanceSlides();
-  const interval = window.setInterval(() => {
-    void loadFinanceSlides();
-  }, 10000);
+}, 10000);
 
   return () => {
     mounted = false;
