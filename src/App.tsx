@@ -1803,9 +1803,9 @@ const [renovasiDetailItems, setRenovasiDetailItems] = useState<RenovasiDetailIte
       : slideIndex === 3 || slideIndex === 4
         ? "PERINCIAN PENGELUARAN"
         : slideIndex === 5
-          ? "AGENDA MASJID"
+          ? "LAPORAN KAS RENOVASI"
           : slideIndex === 6
-            ? "LAPORAN KAS RENOVASI"
+            ? "AGENDA MASJID"
             : "INFO TAMBAHAN";
 
   const agendaItems = useMemo(() => {
@@ -2184,26 +2184,7 @@ const [renovasiDetailItems, setRenovasiDetailItems] = useState<RenovasiDetailIte
                           <div className="-mx-8 -mb-8 mt-0">{renderFinanceNotice(true)}</div>
                         </section>
                       )}
-
-                      {slideIndex === 5 && (
-                        <section className="grid h-full min-h-0 grid-rows-4 gap-3">
-                          {agendaItems.length > 0 ? (
-                            agendaItems.map((item, index) => (
-                              <div key={`${item.Agenda}-${item.Tanggal}-${index}`} className="flex min-h-0 flex-col justify-center rounded-xl bg-white p-5 text-black">
-                                <div className={cn("font-black leading-tight", unifiedFinanceAgendaTextClass)}>{(item.Agenda || "-").toUpperCase()}</div>
-                                <div className="mt-2 text-[2.4rem] font-bold leading-tight text-zinc-700">
-                                  {(item.Hari || "-").toUpperCase()} {dateOnly(item.Tanggal || "")} | {(item.Waktu || "-").toUpperCase()} | {(item.Tempat || "-").toUpperCase()}
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="col-span-full flex items-center justify-center rounded-xl bg-white text-[3.2rem] font-black text-zinc-500">
-                              BELUM ADA AGENDA
-                            </div>
-                          )}
-                        </section>
-                      )}
-{slideIndex === 6 && (
+{slideIndex === 5 && (
   <section className="grid h-full min-h-0 grid-rows-[auto_auto_1fr] gap-3">
     <div className="w-full rounded-xl bg-[#002f2a] px-10 py-3 text-center">
       <div className="text-[2.6rem] font-bold uppercase tracking-wide text-emerald-200">
@@ -2221,16 +2202,25 @@ const [renovasiDetailItems, setRenovasiDetailItems] = useState<RenovasiDetailIte
       </div>
     </div>
 
-    <div className="rounded-xl bg-white p-6 text-black">
-      <div className="text-[3.6rem] font-black">• PERINCIAN KAS RENOVASI</div>
-      <div className="mt-3 grid min-h-0 gap-2">
+    <div className="flex min-h-0 flex-col rounded-xl bg-white p-3 text-black shadow-md">
+      <div className="mb-2 inline-block bg-[#003b34] px-4 py-1 text-[2.55rem] font-black text-white">
+        PERINCIAN KAS RENOVASI
+      </div>
+
+      <div className="grid grid-cols-[360px_1fr_250px] items-center gap-3 border-b border-zinc-400 bg-zinc-100 px-2 py-2 text-[2.2rem] font-black">
+        <div>TANGGAL</div>
+        <div>KETERANGAN</div>
+        <div className="text-right">NOMINAL</div>
+      </div>
+
+      <div className="grid min-h-0 flex-1 auto-rows-fr">
         {renovasiDetailItems.length > 0 ? (
           renovasiDetailItems.map((item, index) => {
             const isMasuk = item.jenis.includes("MASUK");
             return (
               <div
                 key={`${item.timestamp}-${index}`}
-                className="grid grid-cols-[260px_1fr_250px] items-center gap-3 border-b border-zinc-300 py-2 text-[2.8rem] font-black"
+                className="grid grid-cols-[360px_1fr_250px] items-center gap-3 border-b border-zinc-300 py-2 text-[2.8rem] font-black"
               >
                 <div>{dateOnly(item.tanggal || item.timestamp)}</div>
                 <div className="truncate">{(item.keterangan || "-").toUpperCase()}</div>
@@ -2249,6 +2239,26 @@ const [renovasiDetailItems, setRenovasiDetailItems] = useState<RenovasiDetailIte
     </div>
   </section>
 )}
+
+{slideIndex === 6 && (
+  <section className="grid h-full min-h-0 grid-rows-4 gap-3">
+    {agendaItems.length > 0 ? (
+      agendaItems.map((item, index) => (
+        <div key={`${item.Agenda}-${item.Tanggal}-${index}`} className="flex min-h-0 flex-col justify-center rounded-xl bg-white p-5 text-black">
+          <div className={cn("font-black leading-tight", unifiedFinanceAgendaTextClass)}>{(item.Agenda || "-").toUpperCase()}</div>
+          <div className="mt-2 text-[2.4rem] font-bold leading-tight text-zinc-700">
+            {(item.Hari || "-").toUpperCase()} {dateOnly(item.Tanggal || "")} | {(item.Waktu || "-").toUpperCase()} | {(item.Tempat || "-").toUpperCase()}
+          </div>
+        </div>
+      ))
+    ) : (
+      <div className="col-span-full flex items-center justify-center rounded-xl bg-white text-[3.2rem] font-black text-zinc-500">
+        BELUM ADA AGENDA
+      </div>
+    )}
+  </section>
+)}
+                      
                       {slideIndex === 7 && (
                         <section className="h-full min-h-0 overflow-hidden rounded-xl bg-white p-6 text-black">
                           {extraSlide.imageUrl ? (
