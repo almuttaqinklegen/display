@@ -876,6 +876,9 @@ export default function App() {
   const [backgroundOpacity, setBackgroundOpacity] = useState<number>(0.2);
   const [laporanSummary, setLaporanSummary] = useState<LaporanSummary>(() => buildLaporanSummary([], SALDO_AWAL_DEFAULT));
   const [perincianItems, setPerincianItems] = useState<ReportTxn[]>([]);
+const [renovasiKasMasuk, setRenovasiKasMasuk] = useState(0);
+const [renovasiKasKeluar, setRenovasiKasKeluar] = useState(0);
+const [renovasiDetailItems, setRenovasiDetailItems] = useState<RenovasiDetailItem[]>([]);
 
   const youtubePageModeUrl = useMemo(() => {
     if (!youtubeChannelPage.url) {
@@ -914,7 +917,7 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  const slideCount = extraSlide.enabled ? 7 : 6;
+  const slideCount = extraSlide.enabled ? 8 : 7;
 
   useEffect(() => {
     if (slideIndex >= slideCount) {
@@ -1200,25 +1203,7 @@ export default function App() {
         controller?.abort();
         controller = new AbortController();
 
-        const [laporanResponse, perincianResponse] = await Promise.all([
-          fetch(`${CSV_LAPORAN_KEUANGAN_URL}&_ts=${Date.now()}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-          fetch(`${CSV_PERINCIAN_PENGELUARAN_URL}&_ts=${Date.now()}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-        ]);
-
-        if (!laporanResponse.ok || !perincianResponse.ok) {
-          return;
-        }
-
-        const [laporanCsv, perincianCsv] = await Promise.all([
-          laporanResponse.text(),
-          perincianResponse.text(),
-        ]);
+        
 
       if (!mounted) return;
 
@@ -1235,6 +1220,37 @@ if (parsedHorizontal) {
 }
 
 setPerincianItems(parseReportTransactions(perincianCsv));
+        const renovasiSummaryRows = toHeaderRows(renovasiSummaryCsv);
+const totalMasukRenovasi = renovasiSummaryRows.reduce(
+  (sum, row) => sum + parseRupiah(getByAliases(row, ["KAS MASUK RENOVASI"])),
+  0,
+);
+const totalKeluarRenovasi = renovasiSummaryRows.reduce(
+  (sum, row) => sum + parseRupiah(getByAliases(row, ["KAS KELUAR RENOVASI"])),
+  0,
+);
+
+setRenovasiKasMasuk(totalMasukRenovasi);
+setRenovasiKasKeluar(totalKeluarRenovasi);
+
+const renovasiDetailRows = toHeaderRows(renovasiDetailCsv);
+const latestRenovasi = renovasiDetailRows
+  .map((row) => ({
+    timestamp: getByAliases(row, ["TIMESTAMP"]),
+    jenis: getByAliases(row, ["JENIS"]).toUpperCase(),
+    tanggal: getByAliases(row, ["TANGGAL"]),
+    keterangan: getByAliases(row, ["KETERANGAN", "KETERANGAN ", "URAIAN", "DESKRIPSI"]),
+    nominal: parseRupiah(getByAliases(row, ["NOMINAL", "JUMLAH", "TOTAL"])),
+  }))
+  .filter((item) => item.jenis || item.tanggal || item.keterangan || item.nominal !== 0)
+  .sort(
+    (a, b) =>
+      parseCommandTimestamp(b.timestamp || b.tanggal) -
+      parseCommandTimestamp(a.timestamp || a.tanggal),
+  )
+  .slice(0, 4);
+
+setRenovasiDetailItems(latestRenovasi);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
@@ -1242,7 +1258,35 @@ setPerincianItems(parseReportTransactions(perincianCsv));
       }
     };
 
-    void loadFinanceSlides();
+    void loadFinanceSlides(const [laporanResponse, perincianResponse, renovasiSummaryResponse, renovasiDetailResponse] = await Promise.all([
+  fetch(`${CSV_LAPORAN_KEUANGAN_URL}&_ts=${Date.now()}`, {
+    cache: "no-store",
+    signal: controller.signal,
+  }),
+  fetch(`${CSV_PERINCIAN_PENGELUARAN_URL}&_ts=${Date.now()}`, {
+    cache: "no-store",
+    signal: controller.signal,
+  }),
+  fetch(`${CSV_KAS_RENOVASI_SUMMARY_URL}&_ts=${Date.now()}`, {
+    cache: "no-store",
+    signal: controller.signal,
+  }),
+  fetch(`${CSV_KAS_RENOVASI_DETAIL_URL}&_ts=${Date.now()}`, {
+    cache: "no-store",
+    signal: controller.signal,
+  }),
+]);
+
+if (!laporanResponse.ok || !perincianResponse.ok || !renovasiSummaryResponse.ok || !renovasiDetailResponse.ok) {
+  return;
+}
+
+const [laporanCsv, perincianCsv, renovasiSummaryCsv, renovasiDetailCsv] = await Promise.all([
+  laporanResponse.text(),
+  perincianResponse.text(),
+  renovasiSummaryResponse.text(),
+  renovasiDetailResponse.text(),
+]););
     const interval = window.setInterval(() => {
       void loadFinanceSlides();
     }, 10000);
@@ -1744,15 +1788,17 @@ setPerincianItems(parseReportTransactions(perincianCsv));
   };
   const handleVideoEnded = () => stopVideoPlayback(true);
   const fullSlideTitle =
-    slideIndex === 1
-      ? "LAPORAN KAS MASUK MINGGUAN"
-      : slideIndex === 2
-        ? "LAPORAN KAS KELUAR MINGGUAN"
-        : slideIndex === 3 || slideIndex === 4
+  slideIndex === 1
+    ? "LAPORAN KAS MASUK MINGGUAN"
+    : slideIndex === 2
+      ? "LAPORAN KAS KELUAR MINGGUAN"
+      : slideIndex === 3 || slideIndex === 4
         ? "PERINCIAN PENGELUARAN"
         : slideIndex === 5
           ? "AGENDA MASJID"
-          : "INFO TAMBAHAN";
+          : slideIndex === 6
+            ? "LAPORAN KAS RENOVASI"
+            : "INFO TAMBAHAN";
 
   const agendaItems = useMemo(() => {
     return [...general.agendas].slice(-4).reverse();
@@ -2149,8 +2195,53 @@ setPerincianItems(parseReportTransactions(perincianCsv));
                           )}
                         </section>
                       )}
+{slideIndex === 6 && (
+  <section className="grid h-full min-h-0 grid-rows-[auto_auto_1fr] gap-3">
+    <div className="w-full rounded-xl bg-[#002f2a] px-10 py-3 text-center">
+      <div className="text-[2.6rem] font-bold uppercase tracking-wide text-emerald-200">
+        TOTAL SALDO KAS RENOVASI
+      </div>
+      <div className="mt-1 text-[5.2rem] font-black text-[#39ff14]">
+        RP {(renovasiKasMasuk - renovasiKasKeluar).toLocaleString("id-ID")}
+      </div>
+    </div>
 
-                      {slideIndex === 6 && (
+    <div className="rounded-xl bg-white p-6 text-black">
+      <div className="mt-1 font-black">
+        {renderAmountLine("KAS MASUK RENOVASI", renovasiKasMasuk, "text-[#15803d]", unifiedFinanceAgendaTextClass, true)}
+        {renderAmountLine("KAS KELUAR RENOVASI", renovasiKasKeluar, "text-[#ef4444]", unifiedFinanceAgendaTextClass, true)}
+      </div>
+    </div>
+
+    <div className="rounded-xl bg-white p-6 text-black">
+      <div className="text-[3.6rem] font-black">• PERINCIAN KAS RENOVASI</div>
+      <div className="mt-3 grid min-h-0 gap-2">
+        {renovasiDetailItems.length > 0 ? (
+          renovasiDetailItems.map((item, index) => {
+            const isMasuk = item.jenis.includes("MASUK");
+            return (
+              <div
+                key={`${item.timestamp}-${index}`}
+                className="grid grid-cols-[260px_1fr_250px] items-center gap-3 border-b border-zinc-300 py-2 text-[2.8rem] font-black"
+              >
+                <div>{dateOnly(item.tanggal || item.timestamp)}</div>
+                <div className="truncate">{(item.keterangan || "-").toUpperCase()}</div>
+                <div className={cn("text-right", isMasuk ? "text-[#15803d]" : "text-[#ef4444]")}>
+                  {item.nominal.toLocaleString("id-ID")}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="flex h-full items-center justify-center text-[3rem] font-black text-zinc-500">
+            BELUM ADA DATA KAS RENOVASI
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+)}
+                      {slideIndex === 7 && (
                         <section className="h-full min-h-0 overflow-hidden rounded-xl bg-white p-6 text-black">
                           {extraSlide.imageUrl ? (
                             <div className="h-full w-full">
