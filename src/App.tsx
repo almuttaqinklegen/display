@@ -37,6 +37,11 @@ const CSV_LAPORAN_KEUANGAN_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vSj53euGcFoC_pwWNugNjUM2o8e74s922W5Yjx4RcH0Dr3gLGEGD_PzDxq9ycXPJcblAunsoH2y1gi0/pub?output=csv";
 const CSV_PERINCIAN_PENGELUARAN_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQVl-aTPsB-q-ftkgNkNgbIqORmgAfo2o0eTGruLqinIu_HYwWMqSqgzMMqDVTj0pld-mfGCClDHuWo/pub?output=csv";
+const CSV_KAS_RENOVASI_SUMMARY_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vR1mG4l54_pu6uKZAqj79DWIhtnlle9rJrn3KAnGX5ygw0v7L0jWaEMeyXVE3BIGb17DWGNLmIRwnez/pub?output=csv";
+
+const CSV_KAS_RENOVASI_DETAIL_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSiFkv7lsIC6b4WY2jhaoe8PN3hhClg7gGExPugJLXB9RX4-Rfgd1l9yT-buqSX6sRbQuT3gplLtryC/pub?output=csv";
 const SALDO_AWAL_DEFAULT = 6825500;
 const FINANCE_NOTICE_TEXT = "UNTUK PENGELUARAN BIAYA LISTRIK & AIR SUDAH DITANGGUNG JAMAAH";
 
@@ -88,6 +93,14 @@ type LaporanSummary = {
     kasKhatibJumat: number;
   };
   totalSaldo: number;
+};
+
+type RenovasiDetailItem = {
+  timestamp: string;
+  jenis: string;
+  tanggal: string;
+  keterangan: string;
+  nominal: number;
 };
 
 function isFullscreenActive(): boolean {
