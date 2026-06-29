@@ -1438,6 +1438,75 @@ useEffect(() => {
       );
 
       setRenovasiKasMasuk(totalMasukRenovasi);
+
+      useEffect(() => {
+  let mounted = true;
+  let controller: AbortController | null = null;
+
+  const loadFinanceSlides = async () => {
+    try {
+      controller?.abort();
+      controller = new AbortController();
+
+      const ts = Date.now();
+      const [laporanResponse, perincianResponse, renovasiSummaryResponse, renovasiDetailResponse] =
+        await Promise.all([
+          fetch(`${CSV_LAPORAN_KEUANGAN_URL}&_ts=${ts}`, {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+          fetch(`${CSV_PERINCIAN_PENGELUARAN_URL}&_ts=${ts}`, {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+          fetch(`${CSV_KAS_RENOVASI_SUMMARY_URL}&_ts=${ts}`, {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+          fetch(`${CSV_KAS_RENOVASI_DETAIL_URL}&_ts=${ts}`, {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+        ]);
+
+      if (!laporanResponse.ok || !perincianResponse.ok || !renovasiSummaryResponse.ok || !renovasiDetailResponse.ok) {
+        return;
+      }
+
+      const [laporanCsv, perincianCsv, renovasiSummaryCsv, renovasiDetailCsv] = await Promise.all([
+        laporanResponse.text(),
+        perincianResponse.text(),
+        renovasiSummaryResponse.text(),
+        renovasiDetailResponse.text(),
+      ]);
+
+      if (!mounted) return;
+
+      const parsedHorizontal = parseLaporanSummaryFromHorizontalCsv(laporanCsv);
+
+      if (parsedHorizontal) {
+        setLaporanSummary(parsedHorizontal);
+      } else {
+        const laporanTransactions = parseReportTransactions(laporanCsv);
+        const saldoAwalManual = extractManualSaldoAwal(laporanCsv);
+        setLaporanSummary(
+          buildLaporanSummary(laporanTransactions, saldoAwalManual ?? SALDO_AWAL_DEFAULT),
+        );
+      }
+
+      setPerincianItems(parseReportTransactions(perincianCsv));
+
+      const renovasiSummaryRows = toHeaderRows(renovasiSummaryCsv);
+      const totalMasukRenovasi = renovasiSummaryRows.reduce(
+        (sum, row) => sum + parseRupiah(getByAliases(row, ["KAS MASUK RENOVASI"])),
+        0,
+      );
+      const totalKeluarRenovasi = renovasiSummaryRows.reduce(
+        (sum, row) => sum + parseRupiah(getByAliases(row, ["KAS KELUAR RENOVASI"])),
+        0,
+      );
+
+      setRenovasiKasMasuk(totalMasukRenovasi);
       setRenovasiKasKeluar(totalKeluarRenovasi);
 
       const renovasiDetailRows = toHeaderRows(renovasiDetailCsv);
