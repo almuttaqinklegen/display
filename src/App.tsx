@@ -1864,41 +1864,26 @@ const [renovasiDetailItems, setRenovasiDetailItems] = useState<RenovasiDetailIte
     </div>
   );
 
-  const getNominalTextClass = (formatted: string) => {
-  if (formatted.length >= 13) return "text-[2.8rem]";
-  if (formatted.length >= 11) return "text-[3.1rem]";
-  if (formatted.length >= 9) return "text-[3.4rem]";
-  return "";
-};
   
   const renderAmountLine = (
   label: string,
   value: number,
   valueClassName: string,
-  textClassName = "text-[3.8rem]",
+  textClassName = "text-[3.6rem]",
   withDivider = false,
 ) => {
-  const formattedValue = value.toLocaleString("id-ID");
-  const nominalTextClass = getNominalTextClass(formattedValue);
-
   return (
     <div
       className={cn(
-        "grid grid-cols-[minmax(0,1fr)_1.8rem_minmax(14rem,max-content)] items-center gap-2 py-1.5 leading-tight font-black",
+        "grid grid-cols-[minmax(0,1fr)_2.4rem_24rem] items-center gap-2 py-1.5 leading-tight font-black",
         withDivider && "border-b border-zinc-300",
         textClassName,
       )}
     >
       <span className="truncate">• {label}</span>
       <span className="text-center">:</span>
-      <span
-        className={cn(
-          "pr-1 text-right whitespace-nowrap tabular-nums",
-          valueClassName,
-          nominalTextClass,
-        )}
-      >
-        {formattedValue}
+      <span className={cn("pr-1 text-right whitespace-nowrap tabular-nums", valueClassName)}>
+        {value.toLocaleString("id-ID")}
       </span>
     </div>
   );
