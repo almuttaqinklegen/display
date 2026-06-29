@@ -1258,8 +1258,6 @@ setRenovasiDetailItems(latestRenovasi);
       }
     };
 
-    void loadFinanceSlides(const [laporanResponse, perincianResponse, renovasiSummaryResponse, renovasiDetailResponse] = await Promise.all([
-  fetch(`${CSV_LAPORAN_KEUANGAN_URL}&_ts=${Date.now()}`, {
 useEffect(() => {
   let mounted = true;
   let controller: AbortController | null = null;
