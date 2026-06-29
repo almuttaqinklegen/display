@@ -1194,7 +1194,7 @@ const [renovasiDetailItems, setRenovasiDetailItems] = useState<RenovasiDetailIte
     };
   }, []);
 
-  useEffect(() => {
+    useEffect(() => {
     let mounted = true;
     let controller: AbortController | null = null;
 
@@ -1203,54 +1203,90 @@ const [renovasiDetailItems, setRenovasiDetailItems] = useState<RenovasiDetailIte
         controller?.abort();
         controller = new AbortController();
 
-        
+        const ts = Date.now();
+        const [laporanResponse, perincianResponse, renovasiSummaryResponse, renovasiDetailResponse] =
+          await Promise.all([
+            fetch(`${CSV_LAPORAN_KEUANGAN_URL}&_ts=${ts}`, {
+              cache: "no-store",
+              signal: controller.signal,
+            }),
+            fetch(`${CSV_PERINCIAN_PENGELUARAN_URL}&_ts=${ts}`, {
+              cache: "no-store",
+              signal: controller.signal,
+            }),
+            fetch(`${CSV_KAS_RENOVASI_SUMMARY_URL}&_ts=${ts}`, {
+              cache: "no-store",
+              signal: controller.signal,
+            }),
+            fetch(`${CSV_KAS_RENOVASI_DETAIL_URL}&_ts=${ts}`, {
+              cache: "no-store",
+              signal: controller.signal,
+            }),
+          ]);
 
-      if (!mounted) return;
+        if (
+          !laporanResponse.ok ||
+          !perincianResponse.ok ||
+          !renovasiSummaryResponse.ok ||
+          !renovasiDetailResponse.ok
+        ) {
+          return;
+        }
 
-const parsedHorizontal = parseLaporanSummaryFromHorizontalCsv(laporanCsv);
+        const [laporanCsv, perincianCsv, renovasiSummaryCsv, renovasiDetailCsv] = await Promise.all([
+          laporanResponse.text(),
+          perincianResponse.text(),
+          renovasiSummaryResponse.text(),
+          renovasiDetailResponse.text(),
+        ]);
 
-if (parsedHorizontal) {
-  setLaporanSummary(parsedHorizontal);
-} else {
-  const laporanTransactions = parseReportTransactions(laporanCsv);
-  const saldoAwalManual = extractManualSaldoAwal(laporanCsv);
-  setLaporanSummary(
-    buildLaporanSummary(laporanTransactions, saldoAwalManual ?? SALDO_AWAL_DEFAULT),
-  );
-}
+        if (!mounted) return;
 
-setPerincianItems(parseReportTransactions(perincianCsv));
+        const parsedHorizontal = parseLaporanSummaryFromHorizontalCsv(laporanCsv);
+
+        if (parsedHorizontal) {
+          setLaporanSummary(parsedHorizontal);
+        } else {
+          const laporanTransactions = parseReportTransactions(laporanCsv);
+          const saldoAwalManual = extractManualSaldoAwal(laporanCsv);
+          setLaporanSummary(
+            buildLaporanSummary(laporanTransactions, saldoAwalManual ?? SALDO_AWAL_DEFAULT),
+          );
+        }
+
+        setPerincianItems(parseReportTransactions(perincianCsv));
+
         const renovasiSummaryRows = toHeaderRows(renovasiSummaryCsv);
-const totalMasukRenovasi = renovasiSummaryRows.reduce(
-  (sum, row) => sum + parseRupiah(getByAliases(row, ["KAS MASUK RENOVASI"])),
-  0,
-);
-const totalKeluarRenovasi = renovasiSummaryRows.reduce(
-  (sum, row) => sum + parseRupiah(getByAliases(row, ["KAS KELUAR RENOVASI"])),
-  0,
-);
+        const totalMasukRenovasi = renovasiSummaryRows.reduce(
+          (sum, row) => sum + parseRupiah(getByAliases(row, ["KAS MASUK RENOVASI"])),
+          0,
+        );
+        const totalKeluarRenovasi = renovasiSummaryRows.reduce(
+          (sum, row) => sum + parseRupiah(getByAliases(row, ["KAS KELUAR RENOVASI"])),
+          0,
+        );
 
-setRenovasiKasMasuk(totalMasukRenovasi);
-setRenovasiKasKeluar(totalKeluarRenovasi);
+        setRenovasiKasMasuk(totalMasukRenovasi);
+        setRenovasiKasKeluar(totalKeluarRenovasi);
 
-const renovasiDetailRows = toHeaderRows(renovasiDetailCsv);
-const latestRenovasi = renovasiDetailRows
-  .map((row) => ({
-    timestamp: getByAliases(row, ["TIMESTAMP"]),
-    jenis: getByAliases(row, ["JENIS"]).toUpperCase(),
-    tanggal: getByAliases(row, ["TANGGAL"]),
-    keterangan: getByAliases(row, ["KETERANGAN", "KETERANGAN ", "URAIAN", "DESKRIPSI"]),
-    nominal: parseRupiah(getByAliases(row, ["NOMINAL", "JUMLAH", "TOTAL"])),
-  }))
-  .filter((item) => item.jenis || item.tanggal || item.keterangan || item.nominal !== 0)
-  .sort(
-    (a, b) =>
-      parseCommandTimestamp(b.timestamp || b.tanggal) -
-      parseCommandTimestamp(a.timestamp || a.tanggal),
-  )
-  .slice(0, 4);
+        const renovasiDetailRows = toHeaderRows(renovasiDetailCsv);
+        const latestRenovasi = renovasiDetailRows
+          .map((row) => ({
+            timestamp: getByAliases(row, ["TIMESTAMP"]),
+            jenis: getByAliases(row, ["JENIS"]).toUpperCase(),
+            tanggal: getByAliases(row, ["TANGGAL"]),
+            keterangan: getByAliases(row, ["KETERANGAN", "KETERANGAN ", "URAIAN", "DESKRIPSI"]),
+            nominal: parseRupiah(getByAliases(row, ["NOMINAL", "JUMLAH", "TOTAL"])),
+          }))
+          .filter((item) => item.jenis || item.tanggal || item.keterangan || item.nominal !== 0)
+          .sort(
+            (a, b) =>
+              parseCommandTimestamp(b.timestamp || b.tanggal) -
+              parseCommandTimestamp(a.timestamp || a.tanggal),
+          )
+          .slice(0, 4);
 
-setRenovasiDetailItems(latestRenovasi);
+        setRenovasiDetailItems(latestRenovasi);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
@@ -1258,292 +1294,17 @@ setRenovasiDetailItems(latestRenovasi);
       }
     };
 
-useEffect(() => {
-  let mounted = true;
-  let controller: AbortController | null = null;
+    void loadFinanceSlides();
+    const interval = window.setInterval(() => {
+      void loadFinanceSlides();
+    }, 10000);
 
-  const loadFinanceSlides = async () => {
-    try {
+    return () => {
+      mounted = false;
       controller?.abort();
-      controller = new AbortController();
-
-      const ts = Date.now();
-      const [laporanResponse, perincianResponse, renovasiSummaryResponse, renovasiDetailResponse] =
-        await Promise.all([
-          fetch(`${CSV_LAPORAN_KEUANGAN_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-          fetch(`${CSV_PERINCIAN_PENGELUARAN_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-          fetch(`${CSV_KAS_RENOVASI_SUMMARY_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-          fetch(`${CSV_KAS_RENOVASI_DETAIL_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-        ]);
-
-      if (!laporanResponse.ok || !perincianResponse.ok || !renovasiSummaryResponse.ok || !renovasiDetailResponse.ok) {
-        return;
-      }
-
-      const [laporanCsv, perincianCsv, renovasiSummaryCsv, renovasiDetailCsv] = await Promise.all([
-        laporanResponse.text(),
-        perincianResponse.text(),
-        renovasiSummaryResponse.text(),
-        renovasiDetailResponse.text(),
-      ]);
-
-      if (!mounted) return;
-
-      const parsedHorizontal = parseLaporanSummaryFromHorizontalCsv(laporanCsv);
-
-      if (parsedHorizontal) {
-        setLaporanSummary(parsedHorizontal);
-      } else {
-        const laporanTransactions = parseReportTrauseEffect(() => {
-  let mounted = true;
-  let controller: AbortController | null = null;
-
-  const loadFinanceSlides = async () => {
-    try {
-      controller?.abort();
-      controller = new AbortController();
-
-      const ts = Date.now();
-      const [laporanResponse, perincianResponse, renovasiSummaryResponse, renovasiDetailResponse] =
-        await Promise.all([
-          fetch(`${CSV_LAPORAN_KEUANGAN_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-          fetch(`${CSV_PERINCIAN_PENGELUARAN_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-          fetch(`${CSV_KAS_RENOVASI_SUMMARY_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-          fetch(`${CSV_KAS_RENOVASI_DETAIL_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-        ]);
-
-      if (!laporanResponse.ok || !perincianResponse.ok || !renovasiSummaryResponse.ok || !renovasiDetailResponse.ok) {
-        return;
-      }
-
-      const [laporanCsv, perincianCsv, renovasiSummaryCsv, renovasiDetailCsv] = await Promise.all([
-        laporanResponse.text(),
-        perincianResponse.text(),
-        renovasiSummaryResponse.text(),
-        renovasiDetailResponse.text(),
-      ]);
-
-      if (!mounted) return;
-
-      const parsedHorizontal = parseLaporanSummaryFromHorizontalCsv(laporanCsv);
-
-      if (parsedHorizontal) {
-        setLaporanSummary(parsedHorizontal);
-      } else {
-        const laporanTransactions = parseReportTransactions(laporanCsv);
-        const saldoAwalManual = extractManualSaldoAwal(laporanCsv);
-        setLaporanSummary(
-          buildLaporanSummary(laporanTransactions, saldoAwalManual ?? SALDO_AWAL_DEFAULT),
-        );
-      }
-
-      setPerincianItems(parseReportTransactions(perincianCsv));
-
-      const renovasiSummaryRows = toHeaderRows(renovasiSummaryCsv);
-      const totalMasukRenovasi = renovasiSummaryRows.reduce(
-        (sum, row) => sum + parseRupiah(getByAliases(row, ["KAS MASUK RENOVASI"])),
-        0,
-      );
-useEffect(() => {
-  let mounted = true;
-  let controller: AbortController | null = null;
-
-  const loadFinanceSlides = async () => {
-    try {
-      controller?.abort();
-      controller = new AbortController();
-
-      const ts = Date.now();
-      const [laporanResponse, perincianResponse, renovasiSummaryResponse, renovasiDetailResponse] =
-        await Promise.all([
-          fetch(`${CSV_LAPORAN_KEUANGAN_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-          fetch(`${CSV_PERINCIAN_PENGELUARAN_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-          fetch(`${CSV_KAS_RENOVASI_SUMMARY_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-          fetch(`${CSV_KAS_RENOVASI_DETAIL_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-        ]);
-
-      if (!laporanResponse.ok || !perincianResponse.ok || !renovasiSummaryResponse.ok || !renovasiDetailResponse.ok) {
-        return;
-      }
-
-      const [laporanCsv, perincianCsv, renovasiSummaryCsv, renovasiDetailCsv] = await Promise.all([
-        laporanResponse.text(),
-        perincianResponse.text(),
-        renovasiSummaryResponse.text(),
-        renovasiDetailResponse.text(),
-      ]);
-
-      if (!mounted) return;
-
-      const parsedHorizontal = parseLaporanSummaryFromHorizontalCsv(laporanCsv);
-
-      if (parsedHorizontal) {
-        setLaporanSummary(parsedHorizontal);
-      } else {
-        const laporanTransactions = parseReportTransactions(laporanCsv);
-        const saldoAwalManual = extractManualSaldoAwal(laporanCsv);
-        setLaporanSummary(
-          buildLaporanSummary(laporanTransactions, saldoAwalManual ?? SALDO_AWAL_DEFAULT),
-        );
-      }
-
-      setPerincianItems(parseReportTransactions(perincianCsv));
-
-      const renovasiSummaryRows = toHeaderRows(renovasiSummaryCsv);
-      const totalMasukRenovasi = renovasiSummaryRows.reduce(
-        (sum, row) => sum + parseRupiah(getByAliases(row, ["KAS MASUK RENOVASI"])),
-        0,
-      );
-      const totalKeluarRenovasi = renovasiSummaryRows.reduce(
-        (sum, row) => sum + parseRupiah(getByAliases(row, ["KAS KELUAR RENOVASI"])),
-        0,
-      );
-
-      setRenovasiKasMasuk(totalMasukRenovasi);
-
-      useEffect(() => {
-  let mounted = true;
-  let controller: AbortController | null = null;
-
-  const loadFinanceSlides = async () => {
-    try {
-      controller?.abort();
-      controller = new AbortController();
-
-      const ts = Date.now();
-      const [laporanResponse, perincianResponse, renovasiSummaryResponse, renovasiDetailResponse] =
-        await Promise.all([
-          fetch(`${CSV_LAPORAN_KEUANGAN_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-          fetch(`${CSV_PERINCIAN_PENGELUARAN_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-          fetch(`${CSV_KAS_RENOVASI_SUMMARY_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-          fetch(`${CSV_KAS_RENOVASI_DETAIL_URL}&_ts=${ts}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-        ]);
-
-      if (!laporanResponse.ok || !perincianResponse.ok || !renovasiSummaryResponse.ok || !renovasiDetailResponse.ok) {
-        return;
-      }
-
-      const [laporanCsv, perincianCsv, renovasiSummaryCsv, renovasiDetailCsv] = await Promise.all([
-        laporanResponse.text(),
-        perincianResponse.text(),
-        renovasiSummaryResponse.text(),
-        renovasiDetailResponse.text(),
-      ]);
-
-      if (!mounted) return;
-
-      const parsedHorizontal = parseLaporanSummaryFromHorizontalCsv(laporanCsv);
-
-      if (parsedHorizontal) {
-        setLaporanSummary(parsedHorizontal);
-      } else {
-        const laporanTransactions = parseReportTransactions(laporanCsv);
-        const saldoAwalManual = extractManualSaldoAwal(laporanCsv);
-        setLaporanSummary(
-          buildLaporanSummary(laporanTransactions, saldoAwalManual ?? SALDO_AWAL_DEFAULT),
-        );
-      }
-
-      setPerincianItems(parseReportTransactions(perincianCsv));
-
-      const renovasiSummaryRows = toHeaderRows(renovasiSummaryCsv);
-      const totalMasukRenovasi = renovasiSummaryRows.reduce(
-        (sum, row) => sum + parseRupiah(getByAliases(row, ["KAS MASUK RENOVASI"])),
-        0,
-      );
-      const totalKeluarRenovasi = renovasiSummaryRows.reduce(
-        (sum, row) => sum + parseRupiah(getByAliases(row, ["KAS KELUAR RENOVASI"])),
-        0,
-      );
-
-      setRenovasiKasMasuk(totalMasukRenovasi);
-      setRenovasiKasKeluar(totalKeluarRenovasi);
-
-      const renovasiDetailRows = toHeaderRows(renovasiDetailCsv);
-      const latestRenovasi = renovasiDetailRows
-        .map((row) => ({
-          timestamp: getByAliases(row, ["TIMESTAMP"]),
-          jenis: getByAliases(row, ["JENIS"]).toUpperCase(),
-          tanggal: getByAliases(row, ["TANGGAL"]),
-          keterangan: getByAliases(row, ["KETERANGAN", "KETERANGAN ", "URAIAN", "DESKRIPSI"]),
-          nominal: parseRupiah(getByAliases(row, ["NOMINAL", "JUMLAH", "TOTAL"])),
-        }))
-        .filter((item) => item.jenis || item.tanggal || item.keterangan || item.nominal !== 0)
-        .sort(
-          (a, b) =>
-            parseCommandTimestamp(b.timestamp || b.tanggal) -
-            parseCommandTimestamp(a.timestamp || a.tanggal),
-        )
-        .slice(0, 4);
-
-      setRenovasiDetailItems(latestRenovasi);
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return;
-      }
-    }
-  };
-
-
-        void loadFinanceSlides();
-const interval = window.setInterval(() => {
-  void loadFinanceSlides();
-}, 10000);
-
-  return () => {
-    mounted = false;
-    controller?.abort();
-    window.clearInterval(interval);
-  };
-}, []);
+      window.clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     if (webcamActive) {
